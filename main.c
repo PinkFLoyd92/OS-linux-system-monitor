@@ -8,6 +8,7 @@
 void print_usage(){
       printf("Usage: sys_monitor -C max_cpu -O ok_cpu -M max_memory \n");
 }
+
 int main(int argc, char *argv[])
 {
   int option = 0;
@@ -30,7 +31,8 @@ int main(int argc, char *argv[])
   if (MAX_CPU == -1 || MAX_MEM ==-1 || OK_CPU == -1) {
     print_usage();
     exit(EXIT_FAILURE);
+
   }
-  
+
   exit(EXIT_SUCCESS);
 }
