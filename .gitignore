@@ -1,0 +1,7 @@
+*.odt
+CMakeFiles/
+TAGS
+.~lock.project.odt#
+CMakeCache.txt
+cmake_install.cmake
+
