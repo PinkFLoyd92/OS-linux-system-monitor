@@ -1,8 +1,3 @@
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <getopt.h>
-#include "monitor/monitor.h" 
 #include "main.h"
 
 void print_usage(){
@@ -15,6 +10,8 @@ int main(int argc, char *argv[])
   int MAX_CPU = -1;
   int OK_CPU = -1;
   int MAX_MEM = -1;
+  head_p proc_head;
+  head_b buf_head;
 
   while ((option = getopt(argc, argv,"C:O:M:")) != -1) {
     switch (option) {
@@ -31,8 +28,10 @@ int main(int argc, char *argv[])
   if (MAX_CPU == -1 || MAX_MEM ==-1 || OK_CPU == -1) {
     print_usage();
     exit(EXIT_FAILURE);
-
   }
 
+  //INITIALIZING HEADS OF LISTS
+  init_heads(&proc_head, &buf_head);
+  fill_list_buf(&buf_head);
   exit(EXIT_SUCCESS);
 }
