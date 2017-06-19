@@ -6,12 +6,16 @@
 #include <string.h>
 #include <sys/queue.h>
 
+#define MEM 0
+#define CPU 1;
+
 struct process{
   char* name;
-  int uuid;
-  int cpu_usage;
-  int mem_usage;
-  LIST_ENTRY(node) nodes;
+  int pid;
+  float cpu_usage;
+  float mem_usage;
+  int type;
+  LIST_ENTRY(process) processes;
 };
 
 
@@ -24,7 +28,7 @@ typedef LIST_HEAD(pr_list, process) head_p;
 typedef LIST_HEAD(bf_list, buffer) head_b;
 
 
-void fill_list_buf(head_b *hb);
+void fill_list_buf(head_b *hb, head_p* hp);
 void init_heads(head_p* hp, head_b *hb);
 
 #endif

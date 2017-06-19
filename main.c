@@ -32,6 +32,6 @@ int main(int argc, char *argv[])
 
   //INITIALIZING HEADS OF LISTS
   init_heads(&proc_head, &buf_head);
-  fill_list_buf(&buf_head);
+  fill_list_buf(&buf_head, &proc_head);
   exit(EXIT_SUCCESS);
 }
