@@ -1,10 +1,13 @@
 #include "monitor.h"
+
 #define BUFSIZE 200
+#define COMMAND "ps -o pid,pcpu=CPU_USAGE,pmem,comm,stat $(pgrep -f _hungry) 2>&-;"
+
 ssize_t read;
 
 void fill_list_buf(head_b *hb, head_p *hp){
 
-  const char *cmd = "ps -o pid,pcpu=CPU_USAGE,pmem,comm $(pgrep -f _hungry) 2>&-;";
+  const char *cmd = COMMAND;
   char *buf;//Output of the command
   FILE *ptr;
   char * pch;
@@ -23,8 +26,7 @@ void fill_list_buf(head_b *hb, head_p *hp){
   while((read = getline(&buf, &bufsize, ptr))!= -1) {
     item_buf = (struct buffer*)malloc(sizeof(struct buffer));
     item_buf->line = buf;
-
-    if(buf[0] != ' ' && (strstr(buf, "sh") == NULL)){
+    if(strstr(buf, "PID") == NULL && (strstr(buf, "sh") == NULL)){
       LIST_INSERT_HEAD(hb, item_buf, buffers);
     }
     buf = (char *)malloc(bufsize * sizeof(char));
@@ -40,7 +42,7 @@ void fill_list_buf(head_b *hb, head_p *hp){
     LIST_INSERT_HEAD(hp, item_proc, processes);
     while (pch != NULL)
       {
-	printf ("%s\n",pch);
+	//printf ("%s\n",pch);
 
 	switch (cnt_spc) {
 	case 0: {
@@ -60,6 +62,16 @@ void fill_list_buf(head_b *hb, head_p *hp){
 	  item_proc->name = pch;
 	  break;
 	}
+	case 4: {
+	  if (strstr(pch, "S") != NULL) {
+	    item_proc->stat = "activado";
+	  }else if(strstr(pch, "T") != NULL){
+	    item_proc->stat = "suspendido";
+	  }else{
+	    item_proc->stat = pch;
+	  }
+	  break;
+	}
 	default:
 	  break;
 	}
@@ -71,13 +83,24 @@ void fill_list_buf(head_b *hb, head_p *hp){
   }
 
   LIST_FOREACH(item_proc, hp, processes){
-    printf("Name: %s Memory Usage: %.4f CPU usage %.4f, PID: %d",item_proc->name, item_proc->mem_usage, item_proc->cpu_usage, item_proc->pid);
+    printf("\nName: %s Memory Usage: %.4f CPU usage %.4f, PID: %d, STAT: %s",item_proc->name, item_proc->mem_usage, item_proc->cpu_usage, item_proc->pid, item_proc->stat);
   }
-  free(item_buf);
-  free(buf);
-  exit(EXIT_SUCCESS);
+
+  stop_buffer_process(hp, item_proc, hb, item_buf);
+
 }
 
+
+void stop_buffer_process(head_p* hp, struct process* p, head_b* hb, struct buffer* b){
+  LIST_FOREACH(b, hb, buffers){
+    LIST_REMOVE(b, buffers);	
+    free(b);
+  }
+  LIST_FOREACH(p, hp, processes){
+    LIST_REMOVE(p, processes);	
+    free(p);
+  }
+}
 void init_heads(head_p* hp, head_b* hb){
   LIST_INIT(hp);
   LIST_INIT(hb);

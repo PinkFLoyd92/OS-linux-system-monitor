@@ -15,6 +15,7 @@ struct process{
   float cpu_usage;
   float mem_usage;
   int type;
+  char* stat;
   LIST_ENTRY(process) processes;
 };
 
@@ -30,5 +31,8 @@ typedef LIST_HEAD(bf_list, buffer) head_b;
 
 void fill_list_buf(head_b *hb, head_p* hp);
 void init_heads(head_p* hp, head_b *hb);
+int suspend_process(head_p* hp, int pid);
+int start_process(head_p* hp, int pid);
+void stop_buffer_process(head_p* hp, struct process* p, head_b* hb, struct buffer* b);
 
 #endif
