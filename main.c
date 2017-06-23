@@ -32,10 +32,11 @@ int main(int argc, char *argv[])
 
   //INITIALIZING HEADS OF LISTS
   init_heads(&proc_head, &buf_head);
-  for (int i = 0; i < 5; i++) {
-    printf("\nIteracion %d:\n", i);
-    fill_list_buf(&buf_head, &proc_head);
+  for (int i = 0; i < 20; i++) {
+    printf("\nITERACION %d:\n", i);
+    fill_list_buf(&buf_head, &proc_head, &MAX_CPU, &OK_CPU, &MAX_MEM);
     sleep(TIME_SLEEP);
   }
+  /* get_total_ram(); */
   exit(EXIT_SUCCESS);
 }

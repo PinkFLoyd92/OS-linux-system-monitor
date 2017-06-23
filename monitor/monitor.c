@@ -1,11 +1,14 @@
 #include "monitor.h"
 
 #define BUFSIZE 200
+#define BUFMEM 100
 #define COMMAND "ps -o pid,pcpu=CPU_USAGE,pmem,comm,stat $(pgrep -f _hungry) 2>&-;"
+#define FREE "free -m | awk '/Mem/ {print $7;}'"
+#define TOTAL_RAM "free -m | awk '/Mem/ {print $2;}'"
 
-ssize_t read;
+ssize_t _read;
 
-void fill_list_buf(head_b *hb, head_p *hp){
+void fill_list_buf(head_b *hb, head_p *hp, int* max_cpu, int* ok_cpu, int* max_mem){
 
   const char *cmd = COMMAND;
   char *buf;//Output of the command
@@ -23,7 +26,7 @@ void fill_list_buf(head_b *hb, head_p *hp){
     exit(EXIT_FAILURE);
   }
 
-  while((read = getline(&buf, &bufsize, ptr))!= -1) {
+  while((_read = getline(&buf, &bufsize, ptr))!= -1) {
     item_buf = (struct buffer*)malloc(sizeof(struct buffer));
     item_buf->line = buf;
     if(strstr(buf, "PID") == NULL && (strstr(buf, "sh") == NULL)){
@@ -63,10 +66,10 @@ void fill_list_buf(head_b *hb, head_p *hp){
 	  break;
 	}
 	case 4: {
-	  if (strstr(pch, "S") != NULL) {
-	    item_proc->stat = "activado";
+	  if (strstr(pch, "S") != NULL || strstr(pch, "R") != NULL) {
+	    item_proc->stat =(char*) "ACTIVE";
 	  }else if(strstr(pch, "T") != NULL){
-	    item_proc->stat = "suspendido";
+	    item_proc->stat = (char*)"SUSPENDED";
 	  }else{
 	    item_proc->stat = pch;
 	  }
@@ -82,14 +85,78 @@ void fill_list_buf(head_b *hb, head_p *hp){
 
   }
 
-  LIST_FOREACH(item_proc, hp, processes){
-    printf("\nName: %s Memory Usage: %.4f CPU usage %.4f, PID: %d, STAT: %s",item_proc->name, item_proc->mem_usage, item_proc->cpu_usage, item_proc->pid, item_proc->stat);
-  }
-
+  print_processes(hp, item_proc);
+  check_processes(hp, item_proc, *max_cpu, *ok_cpu, (*max_mem));
   stop_buffer_process(hp, item_proc, hb, item_buf);
 
 }
 
+
+void check_processes(head_p* hp, struct process* item_proc, float max_cpu, float ok_cpu, float max_mem){
+  LIST_FOREACH(item_proc, hp, processes){
+    if (item_proc->cpu_usage > max_cpu) {
+      suspend_process(item_proc->pid);
+      printf("\n" ANSI_COLOR_CYAN     "SUSPENDED PROCESS: %s PID: %d"     ANSI_COLOR_RESET "\n", item_proc->name, item_proc->pid);
+    }
+    if (item_proc->mem_usage > max_mem) {
+      kill_process(item_proc->pid);
+      printf("\n" ANSI_COLOR_CYAN     "TERMINATED PROCESS: %s PID: %d"     ANSI_COLOR_RESET "\n", item_proc->name, item_proc->pid);
+    }
+
+    if (item_proc->cpu_usage <= ok_cpu && strcmp(item_proc->stat ,(char*)"SUSPENDED") == 0) {
+      start_process(item_proc->pid);
+      printf("\n" ANSI_COLOR_CYAN     "RESTARTING PROCESS: %s PID: %d"     ANSI_COLOR_RESET "\n", item_proc->name, item_proc->pid);
+    }
+
+  }
+
+  // print_processes(hp, item_proc);
+}
+
+void print_processes(head_p* hp, struct process* item_proc){
+  printf("\n" ANSI_COLOR_RED     "PROCESSES:"     ANSI_COLOR_RESET "\n");
+  printf(ANSI_COLOR_YELLOW  "NAME          MEM     CPU       PID      STAT"  ANSI_COLOR_RESET "\n");
+  LIST_FOREACH(item_proc, hp, processes){
+    printf(ANSI_COLOR_GREEN   "%s"   ANSI_COLOR_RESET " -- ", item_proc->name );
+    printf(ANSI_COLOR_GREEN   "%.2f"   ANSI_COLOR_RESET " -- ", item_proc->mem_usage );
+    printf(ANSI_COLOR_GREEN   "%.2f"   ANSI_COLOR_RESET " -- ", item_proc->cpu_usage );
+    printf( ANSI_COLOR_GREEN   "%d"   ANSI_COLOR_RESET " -- ", item_proc->pid);
+    printf( ANSI_COLOR_GREEN   "%s"   ANSI_COLOR_RESET "\n", item_proc->stat);
+    /* printf("\nName: %s Memory Usage: %.4f CPU usage %.4f, PID: %d, STAT: %s",item_proc->name, item_proc->mem_usage, item_proc->cpu_usage, item_proc->pid, item_proc->stat); */
+  }
+}
+int get_max_cpu_pid(head_p* hp){
+  struct process *proc;
+
+  proc = (struct process*)malloc(sizeof(struct process));
+
+  float max = -1;
+  int pid = 0;
+  LIST_FOREACH(proc, hp, processes){
+    if(proc->cpu_usage>max){
+      max = proc->cpu_usage;
+      pid = proc->pid;
+    }
+  }
+  return pid;
+}
+
+
+int get_max_mem_pid(head_p* hp){
+  struct process *proc;
+
+  proc = (struct process*)malloc(sizeof(struct process));
+
+  float max = -1;
+  int pid = 0;
+  LIST_FOREACH(proc, hp, processes){
+    if(proc->mem_usage>max){
+      max = proc->mem_usage;
+      pid = proc->pid;
+    }
+  }
+  return pid;
+}
 
 void stop_buffer_process(head_p* hp, struct process* p, head_b* hb, struct buffer* b){
   LIST_FOREACH(b, hb, buffers){
@@ -101,13 +168,64 @@ void stop_buffer_process(head_p* hp, struct process* p, head_b* hb, struct buffe
     free(p);
   }
 }
+
 void init_heads(head_p* hp, head_b* hb){
   LIST_INIT(hp);
   LIST_INIT(hb);
 
 }
 
+int suspend_process(int pid){
+  kill(pid, SIGSTOP);
+  return pid;
+}
 
+int start_process(int pid){
+  kill(pid, SIGCONT);
+  return pid;
+}
+
+int kill_process(int pid){
+  kill(pid, SIGTERM);
+  return pid;
+}
+int get_free_ram(){
+  FILE *ptr;
+  const char *cmd = FREE;
+  char *buf;//Output of the command
+  size_t bufsize = BUFSIZE;
+
+  if (NULL == (ptr = popen(cmd, "r"))) {
+    printf("An error ocurred");
+    exit(EXIT_FAILURE);
+  }
+  buf = (char *)malloc(bufsize * sizeof(char));
+  while((_read = getline(&buf, &bufsize, ptr))!= -1) {
+
+    printf("\nThe memory is %s \n", buf);
+    return atoi(buf);
+  }
+  return -1;
+}
+
+int get_total_ram(){
+  FILE *ptr;
+  const char *cmd = TOTAL_RAM;
+  char *buf;//Output of the command
+  size_t bufsize = BUFSIZE;
+
+  if (NULL == (ptr = popen(cmd, "r"))) {
+    printf("An error ocurred");
+    exit(EXIT_FAILURE);
+  }
+  buf = (char *)malloc(bufsize * sizeof(char));
+  while((_read = getline(&buf, &bufsize, ptr))!= -1) {
+
+    printf("\nThe total memory is %s \n", buf);
+    return atoi(buf);
+  }
+  return -1;
+}
 // struct process *list = malloc(sizeof(struct process)*1);
 //first we have to check the pids of the hunger process and mem process
 //--------------------
