@@ -1,5 +1,6 @@
 #include "main.h"
 #define TIME_SLEEP 2
+#define DURATION 20
 void print_usage(){
       printf("Usage: sys_monitor -C max_cpu -O ok_cpu -M max_memory \n");
 }
@@ -32,11 +33,12 @@ int main(int argc, char *argv[])
 
   //INITIALIZING HEADS OF LISTS
   init_heads(&proc_head, &buf_head);
-  for (int i = 0; i < 20; i++) {
+  for (int i = 0; i < DURATION; i++) {
+   /* get_total_ram(); */
     printf("\nITERACION %d:\n", i);
     fill_list_buf(&buf_head, &proc_head, &MAX_CPU, &OK_CPU, &MAX_MEM);
     sleep(TIME_SLEEP);
   }
-  /* get_total_ram(); */
+  finish_processes(&buf_head, &proc_head);
   exit(EXIT_SUCCESS);
 }

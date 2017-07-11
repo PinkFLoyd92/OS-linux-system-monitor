@@ -43,16 +43,18 @@ typedef LIST_HEAD(bf_list, buffer) head_b;
 
 
 void fill_list_buf(head_b *hb, head_p* hp, int* max_cpu, int* ok_cpu, int* max_mem);
+void finish_processes(head_b *hb, head_p* hp);
 void init_heads(head_p* hp, head_b *hb);
 int suspend_process(int pid);
 int start_process(int pid);
 int kill_process(int pid);
 void stop_buffer_process(head_p* hp, struct process* p, head_b* hb, struct buffer* b);
 int get_free_ram();
-int get_total_ram();
+float get_total_ram();
 int get_max_cpu_pid(head_p* hp);
 int get_max_mem_pid(head_p* hp);
 void print_processes(head_p* hp, struct process* item_proc);
 void check_processes(head_p* hp, struct process* item_proc, float max_cpu, float ok_cpu, float max_mem);
 
+void end_processes(head_p* hp, struct process* item_proc);
 #endif

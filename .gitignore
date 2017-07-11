@@ -6,5 +6,6 @@ CMakeCache.txt
 cmake_install.cmake
 sys_monitor
 monitor.o
+monitor.zip
 processes/mem_hungry
 processes/cpu_hungry
